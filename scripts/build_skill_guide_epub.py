@@ -12,10 +12,10 @@ from xml.etree import ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 WORK = ROOT / "assets" / "_epub_work"
-EPUB_NAME = "自動魯曼編號機_使用手冊_公開版_2026-06-17_02.epub"
+EPUB_NAME = "自動魯曼編號機_使用手冊_公開版_2026-06-17_03.epub"
 EPUB_PATH = ASSETS / EPUB_NAME
 DOWNLOAD = ASSETS / "download.epub"
-TITLE = "自動魯曼編號機 使用手冊 公開版 2026-06-17 02"
+TITLE = "自動魯曼編號機 使用手冊 公開版 2026-06-17 03"
 AUTHOR = "永錫與 Codex"
 
 
@@ -23,26 +23,14 @@ CHAPTERS = [
     {
         "code": "0.1",
         "title": "FIRE 知識卡：為什麼需要自動魯曼編號機",
-        "body": """　　　　　　　　　　【Ⓕ Fact 事實】
-　　　　　　　　　　定義：穩定卡號
-　　　　　　　　　　主張：章節生長
-　　　　　　　　　　證據：缺號錯碼
-
-
-　　　　　↗　　　　　　　　　　　　　　　↘
-　　【Ⓘ Index】　　　中【◎編號機】　　　【Ⓡ Relation】
-　　　重新入口　　　　◎編號機　　　　　關係網絡
-　　　────────　────────　────────
-　　　魯曼編號　　　　章節定址　　　　　書稿成骨
-　　　九宮Section　　　分支生長　　　　　卡片補枝
-　　　EPUB目錄　　　　錯碼校正　　　　　索引分離
-
-
-　　　　　↖　　　　　　　　　　　　　　　↙
-　　　　　　　　　　【Ⓔ Encyclopedia】
-　　　　　　　　　　概念：書稿地址
-　　　　　　　　　　用途：卡片入書
-　　　　　　　　　　判斷：保留舊碼"""
+        "body": "自動魯曼編號機的任務，是讓書稿地址、魯曼分支、Mandala section 與 EPUB 索引各守其位。公開版用 FAST 日計劃作為小案例，示範如何保留舊碼、補上新卡，並在發布前清理私人 catalog。",
+        "fire": {
+            "Fact 事實": ["定義：穩定卡號", "主張：章節生長", "證據：缺號錯碼"],
+            "Index 索引": ["重新入口", "魯曼編號", "EPUB 目錄"],
+            "Relation 關係": ["關係網絡", "章節定址", "錯碼校正"],
+            "Encyclopedia 百科": ["概念：書稿地址", "用途：卡片入書", "判斷：保留舊碼"]
+        },
+        "center": "◎ 編號機：書稿成骨，卡片補枝，索引分離"
     },
     {
         "code": "1.1",
@@ -91,10 +79,33 @@ def cjk_count(text: str) -> int:
     return len(re.findall(r"[\u3400-\u9fff]", text))
 
 
+def chapter_plain_text(chapter):
+    parts = [chapter.get("body", ""), chapter.get("center", "")]
+    for values in chapter.get("fire", {}).values():
+        parts.extend(values)
+    return "\n".join(parts)
+
+
+def render_body(chapter):
+    paras = "".join(f"<p>{html.escape(p)}</p>" for p in chapter["body"].split("\n\n") if p.strip())
+    if "fire" not in chapter:
+        return paras
+    fire_items = []
+    for heading, values in chapter["fire"].items():
+        lis = "".join(f"<li>{html.escape(value)}</li>" for value in values)
+        fire_items.append(
+            f'<section class="fire-section"><h2>{html.escape(heading)}</h2><ul>{lis}</ul></section>'
+        )
+    return (
+        f'{paras}<p class="fire-center">{html.escape(chapter["center"])}</p>'
+        f'<section class="fire-card">{"".join(fire_items)}</section>'
+    )
+
+
 def xhtml_page(chapter, index, total):
     prev_link = f"part{index - 1:03d}.xhtml" if index > 1 else "toc.xhtml"
     next_link = f"part{index + 1:03d}.xhtml" if index < total else "index.xhtml"
-    paras = "".join(f"<p>{html.escape(p)}</p>" for p in chapter["body"].split("\n\n"))
+    body = render_body(chapter)
     return f'''<?xml version="1.0" encoding="utf-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-Hant">
 <head><title>{html.escape(chapter["code"])} {html.escape(chapter["title"])}</title><link rel="stylesheet" href="../Styles/style.css" type="text/css"/></head>
@@ -102,7 +113,7 @@ def xhtml_page(chapter, index, total):
 <section id="p{index:03d}">
 <p class="code">{html.escape(chapter["code"])}</p>
 <h1>{html.escape(chapter["title"])}</h1>
-{paras}
+{body}
 <nav class="pager"><a href="{prev_link}">上一頁</a><a href="toc.xhtml">目錄</a><a href="{next_link}">下一頁</a></nav>
 </section>
 </body>
@@ -124,9 +135,13 @@ def write_epub():
     (WORK / "OEBPS" / "Styles" / "style.css").write_text("""
 body { font-family: serif; line-height: 1.75; margin: 1.5em; color: #1f2933; }
 h1 { font-size: 1.4em; border-bottom: 1px solid #c9d2dc; padding-bottom: .25em; }
+h2 { font-size: 1.05em; margin: 0 0 .35em; }
 .code { color: #586474; font-family: monospace; }
 .pager { display: flex; gap: 1em; margin-top: 2em; border-top: 1px solid #d7dee7; padding-top: 1em; }
-pre { white-space: pre-wrap; font-family: monospace; background: #f7f7f7; padding: 1em; }
+.fire-center { font-weight: 700; border-left: .25em solid #8091a5; padding-left: .75em; }
+.fire-card { margin: 1em 0; }
+.fire-section { border-top: 1px solid #d7dee7; padding: .75em 0; page-break-inside: avoid; }
+.fire-section ul { margin: 0; padding-left: 1.2em; }
 """, encoding="utf-8")
 
     toc_items = []
@@ -178,7 +193,7 @@ pre { white-space: pre-wrap; font-family: monospace; background: #f7f7f7; paddin
     opf = f'''<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
 <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-<dc:identifier id="bookid">urn:auto-luhmann-numberer-guide-2026-06-17-01</dc:identifier>
+<dc:identifier id="bookid">urn:auto-luhmann-numberer-guide-2026-06-17-03</dc:identifier>
 <dc:title>{html.escape(TITLE)}</dc:title>
 <dc:language>zh-Hant</dc:language>
 <dc:creator>{html.escape(AUTHOR)}</dc:creator>
@@ -226,7 +241,7 @@ def validate_epub():
             continue
         if anchor and anchor not in ids_by_file.get(normalized, set()):
             errors.append(f"missing anchor: {src} -> {href}")
-    true_body_cjk_count = sum(cjk_count(ch["body"]) for ch in CHAPTERS)
+    true_body_cjk_count = sum(cjk_count(chapter_plain_text(ch)) for ch in CHAPTERS)
     report = {
         "errors": errors,
         "title": TITLE,

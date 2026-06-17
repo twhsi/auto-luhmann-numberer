@@ -127,4 +127,4 @@ Keep only `references/book-chapter-card-catalog.*` as a public FAST day-plan exa
 - `scripts/extract_book_codes.mjs`: scan a supplied folder and regenerate a relative-path catalog.
 - `scripts/validate_luhmann_catalog.py`: validate catalog JSON for duplicates, depth, malformed Mandala sections, and off-prefix codes.
 - `scripts/build_skill_guide_epub.py`: build the teaching EPUB in `assets/`.
-- `assets/自動魯曼編號機_使用手冊_公開版_2026-06-17_02.epub`: public teaching ebook.
+- `assets/自動魯曼編號機_使用手冊_公開版_2026-06-17_03.epub`: public teaching ebook.
